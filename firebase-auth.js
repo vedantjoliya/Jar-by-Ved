@@ -3,14 +3,16 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChang
 import { getFirestore, doc, setDoc, getDoc, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
 
+const env = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env : {};
+
 const firebaseConfig = {
-  apiKey: "AIzaSyAdKgD51E9KgwohWswIiKN5vaUnqOV0kHQ",
-  authDomain: "jarbyved.firebaseapp.com",
-  projectId: "jarbyved",
-  storageBucket: "jarbyved.firebasestorage.app",
-  messagingSenderId: "57083781357",
-  appId: "1:57083781357:web:a92c0391c72d806b6b2ce4",
-  measurementId: "G-6Y4J4FMKCC"
+  apiKey: env.VITE_FIREBASE_API_KEY || "AIzaSyAdKgD51E9KgwohWswIiKN5vaUnqOV0kHQ",
+  authDomain: env.VITE_FIREBASE_AUTH_DOMAIN || "jarbyved.firebaseapp.com",
+  projectId: env.VITE_FIREBASE_PROJECT_ID || "jarbyved",
+  storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET || "jarbyved.firebasestorage.app",
+  messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID || "57083781357",
+  appId: env.VITE_FIREBASE_APP_ID || "1:57083781357:web:a92c0391c72d806b6b2ce4",
+  measurementId: env.VITE_FIREBASE_MEASUREMENT_ID || "G-6Y4J4FMKCC"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -211,7 +213,14 @@ export function setupAuth(uiElements, onReady) {
       if (currentUser) {
         signOut(auth).catch(e => console.error(e));
       } else {
-        signInWithPopup(auth, provider).catch(e => console.error(e));
+        signInWithPopup(auth, provider).catch(e => {
+          console.error("Sign in error:", e);
+          if (e.code === 'auth/unauthorized-domain') {
+            alert(`Google Sign-In Error: Domain "${window.location.hostname}" is not authorized.\n\nFix: Go to Firebase Console -> Authentication -> Settings -> Authorized domains, and click "Add domain" -> add "${window.location.hostname}".`);
+          } else if (e.code !== 'auth/popup-closed-by-user') {
+            alert("Sign-In failed: " + (e.message || e.code));
+          }
+        });
       }
     });
   }
