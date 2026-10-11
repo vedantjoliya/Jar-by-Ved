@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>JarByVed | Classic Java ME Mobile Emulator</title>
+    <meta name="description" content="Play over 1,000+ classic Java (J2ME) mobile games on any phone, tablet, or desktop with Google cloud save sync. Created by Vedant Joliya." />
+    <meta name="referrer" content="no-referrer" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/style.css">
+  </head>
+  <body>
+    <div id="app">
+      <!-- Top Navigation Header -->
+      <header class="glass-header">
+        <div class="header-content">
+          <!-- Brand Logo -->
+          <a href="#games" class="brand-link" id="brandLogoBtn">
+            <div class="brand-logo-frame">
+              <img src="/logo.png" alt="JarByVed Logo" class="brand-logo-img" />
+            </div>
+            <div class="brand-text">
+              <div class="brand-title">JarBy<span>Ved</span></div>
+              <div class="brand-tagline">RETRO J2ME CLOUD EMULATOR</div>
+            </div>
+          </a>
+
+          <!-- Desktop Navigation Links (Icons only, NO EMOJIS) -->
+          <nav class="nav-links">
+            <button class="nav-link active" data-target="games-view">
+              <svg class="nav-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="6" width="20" height="12" rx="2"></rect>
+                <path d="M6 12h4m-2-2v4m7-1h.01m2.99-2h.01"></path>
+              </svg>
+              <span>Games</span>
+            </button>
+            <button class="nav-link" data-target="faq-view">
+              <svg class="nav-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+              </svg>
+              <span>FAQ</span>
+            </button>
+            <button class="nav-link" data-target="support-view">
+              <svg class="nav-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+              </svg>
+              <span>Support</span>
+            </button>
+            <button class="nav-link" data-target="about-view">
+              <svg class="nav-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+              <span>About</span>
+            </button>
+          </nav>
+
+          <!-- Auth & User Profile Section -->
+          <div class="auth-section">
+            <div id="userProfile" class="user-profile-badge" style="display: none;">
+              <div class="avatar-wrapper">
+                <img id="userAvatar" class="user-avatar" src="" alt="Google Profile" referrerpolicy="no-referrer" crossorigin="anonymous" />
+                <span class="status-indicator-dot" title="Cloud Sync Active"></span>
+              </div>
+              <div class="user-info-text">
+                <span id="userName" class="user-display-name">Player</span>
+                <span class="user-cloud-tag">Cloud Synced</span>
+              </div>
+            </div>
+            <button id="authBtn" class="auth-action-btn">
+              <svg width="18" height="18" viewBox="0 0 24 24" class="google-icon">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+              </svg>
+              <span>Sign in with Google</span>
+            </button>
+
+            <!-- Mobile Hamburger Toggle -->
+            <button id="mobileMenuBtn" class="mobile-menu-btn" aria-label="Toggle navigation menu">
+              <span></span><span></span><span></span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Mobile Drawer Menu -->
+        <div id="mobileDrawer" class="mobile-drawer">
+          <div class="mobile-drawer-header">
+            <div class="drawer-brand">
+              <img src="/logo.png" alt="Logo" class="drawer-logo" />
+              <span>JarByVed</span>
+            </div>
+            <button id="closeDrawerBtn" class="close-drawer-btn" aria-label="Close menu">&times;</button>
+          </div>
+          <div class="mobile-drawer-links">
+            <button class="mobile-nav-link active" data-target="games-view">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"></rect><path d="M6 12h4m-2-2v4m7-1h.01m2.99-2h.01"></path></svg>
+              <span>Games Library</span>
+            </button>
+            <button class="mobile-nav-link" data-target="faq-view">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+              <span>FAQ</span>
+            </button>
+            <button class="mobile-nav-link" data-target="support-view">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+              <span>Support & Feedback</span>
+            </button>
+            <button class="mobile-nav-link" data-target="about-view">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+              <span>About Creator</span>
+            </button>
+          </div>
+          <div class="mobile-drawer-footer">
+            <p>Developed by <a href="https://vedantjoliya.free.nf/" target="_blank">Vedant Joliya</a></p>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main App Container Views -->
+      <main class="main-wrapper">
+        <!-- ========================================== -->
+        <!-- VIEW 1: GAMES LIBRARY VIEW                 -->
+        <!-- ========================================== -->
+        <section id="games-view" class="view-panel active">
+          <!-- Hero Banner -->
+          <div class="hero-banner">
+            <div class="hero-badge">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+              <span>1,087 CLASSIC JAVA ME GAMES PRESERVED</span>
+            </div>
+            <h1 class="hero-title">Relive Mobile Gaming Gold. <br><span class="gradient-text">Anywhere, Any Device.</span></h1>
+            <p class="hero-subtitle">
+              Play timeless Nokia, Sony Ericsson, and Motorola J2ME classics in high fidelity. Features automatic Google Cloud Save synchronization across mobile phones, tablets, and desktop.
+            </p>
+
+            <!-- Actions Bar: Search, Upload, Filter Pills -->
+            <div class="hero-controls">
+              <div class="search-box">
+                <span class="search-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                </span>
+                <input type="text" id="searchInput" placeholder="Search 1,087 games by title or filename..." autocomplete="off" />
+                <button id="clearSearchBtn" class="clear-search-btn" style="display: none;" aria-label="Clear search">&times;</button>
+              </div>
+
+              <div class="upload-box">
+                <label for="customUpload" class="action-btn upload-btn" title="Upload your own .jar game">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                  </svg>
+                  <span>Upload .JAR</span>
+                </label>
+                <input type="file" id="customUpload" accept=".jar" style="display: none;">
+              </div>
+            </div>
+            <p id="uploadStatus" class="upload-status-text"></p>
+
+            <!-- Filter Pills with SVG icons -->
+            <div class="filter-pills">
+              <button class="filter-pill active" data-filter="all">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                <span>All Library (<span id="totalGamesBadge">1,087</span>)</span>
+              </button>
+              <button class="filter-pill" data-filter="favs">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                <span>Favorites (<span id="favCountBadge">0</span>)</span>
+              </button>
+              <button class="filter-pill" data-filter="recents">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                <span>Recent (<span id="recentCountBadge">0</span>)</span>
+              </button>
+              <button class="filter-pill" data-filter="custom">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg>
+                <span>Custom Uploads (<span id="customCountBadge">0</span>)</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Section: Recently Played -->
+          <div id="recentSection" class="game-section" style="display: none;">
+            <div class="section-heading">
+              <div class="heading-title-group">
+                <span class="heading-icon-svg">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                </span>
+                <h2>Recently Played</h2>
+              </div>
+              <button id="clearRecentsBtn" class="heading-action-link">Clear Recent</button>
+            </div>
+            <div class="games-grid" id="recentGamesGrid"></div>
+          </div>
+
+          <!-- Section: Favorites -->
+          <div id="favSection" class="game-section" style="display: none;">
+            <div class="section-heading">
+              <div class="heading-title-group">
+                <span class="heading-icon-svg star-color">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                </span>
+                <h2>Favorite Games</h2>
+              </div>
+            </div>
+            <div class="games-grid" id="favGamesGrid"></div>
+          </div>
+
+          <!-- Section: Custom Uploads -->
+          <div id="customSection" class="game-section" style="display: none;">
+            <div class="section-heading">
+              <div class="heading-title-group">
+                <span class="heading-icon-svg">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg>
+                </span>
+                <h2>Your Custom Uploaded Games</h2>
+              </div>
+            </div>
+            <div class="games-grid" id="customGamesGrid"></div>
+          </div>
+
+          <!-- Section: Main Games Library -->
+          <div id="librarySection" class="game-section">
+            <div class="section-heading">
+              <div class="heading-title-group">
+                <span class="heading-icon-svg">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"></rect><path d="M6 12h4m-2-2v4m7-1h.01m2.99-2h.01"></path></svg>
+                </span>
+                <h2 id="libraryHeadingTitle">All Games Catalog</h2>
+              </div>
+              <span id="resultsCount" class="results-count">Showing 1,087 games</span>
+            </div>
+            <div class="games-grid" id="gamesGrid">
+              <!-- Dynamically rendered game cards -->
+            </div>
+            <div id="noResults" class="empty-state" style="display: none;">
+              <div class="empty-icon-svg">
+                <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
+              </div>
+              <h3>No games found</h3>
+              <p>Try searching for a different keyword or upload your own game archive.</p>
+              <button id="resetSearchBtn" class="action-btn">Reset Search</button>
+            </div>
+            <div id="loadMoreContainer" class="load-more-container" style="display: none;">
+              <button id="loadMoreBtn" class="action-btn load-more-btn">Load More Games</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- VIEW 2: FAQ VIEW                           -->
+        <!-- ========================================== -->
+        <section id="faq-view" class="view-panel">
+          <div class="page-header">
+            <div class="hero-badge">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+              <span>KNOWLEDGE BASE & GUIDES</span>
+            </div>
+            <h1 class="page-title">Frequently Asked Questions</h1>
+            <p class="page-subtitle">Learn how to play, save progress to the cloud, configure mobile keypads, and upload custom games on JarByVed.</p>
+          </div>
+
+          <div class="faq-accordion-list">
+            <div class="faq-item active">
+              <button class="faq-question">
+                <div class="faq-q-title">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg>
+                  <span>How does Google Cloud Save synchronization work?</span>
+                </div>
+                <span class="faq-toggle-icon">−</span>
+              </button>
+              <div class="faq-answer">
+                <p>When you sign in with your Google Account, JarByVed connects directly to Google Firebase Firestore. Any progress you make inside games (RMS record stores, save states, high scores, preferences) is automatically uploaded to your private cloud storage upon exiting the game. When you open JarByVed on another device (such as your smartphone or tablet), your saved data is restored seamlessly.</p>
+              </div>
+            </div>
+
+            <div class="faq-item">
+              <button class="faq-question">
+                <div class="faq-q-title">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
+                  <span>Can I play on Mobile Phones and Tablets?</span>
+                </div>
+                <span class="faq-toggle-icon">+</span>
+              </button>
+              <div class="faq-answer">
+                <p>Yes. JarByVed is built mobile-first. When you launch a game on any touchscreen phone or tablet, an authentic dual virtual keypad appears with:</p>
+                <ul class="faq-sublist">
+                  <li><strong>Left Keypad:</strong> 12-key numeric keyboard (0–9, *, #) with authentic alphanumeric labels.</li>
+                  <li><strong>Right Keypad:</strong> Directional Arrow Keys (Up, Down, Left, Right), Center OK button, Left Soft Key (L/F1), Right Soft Key (R/F2), and Esc key.</li>
+                </ul>
+                <p>Rotating your phone between portrait and landscape modes dynamically reformats the screen and keypad layout.</p>
+              </div>
+            </div>
+
+            <div class="faq-item">
+              <button class="faq-question">
+                <div class="faq-q-title">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="M6 8h.001M10 8h.001M14 8h.001M18 8h.001M8 12h.001M12 12h.001M16 12h.001M7 16h10"></path></svg>
+                  <span>What are the Desktop and Laptop Keyboard Controls?</span>
+                </div>
+                <span class="faq-toggle-icon">+</span>
+              </button>
+              <div class="faq-answer">
+                <table class="faq-controls-table">
+                  <tr><th>Button / Function</th><th>Keyboard Key</th></tr>
+                  <tr><td>Directional Movement (D-Pad)</td><td><kbd>Arrow Keys</kbd> (Up, Down, Left, Right) or Numpad 2, 8, 4, 6</td></tr>
+                  <tr><td>Action / Fire / OK</td><td><kbd>Enter</kbd> or <kbd>Numpad 5</kbd> or <kbd>Space</kbd></td></tr>
+                  <tr><td>Left Soft Key (Menu / Select)</td><td><kbd>F1</kbd> or <kbd>Q</kbd></td></tr>
+                  <tr><td>Right Soft Key (Back / Exit)</td><td><kbd>F2</kbd> or <kbd>E</kbd></td></tr>
+                  <tr><td>Number Keys (1 - 9, 0)</td><td><kbd>1</kbd> through <kbd>0</kbd></td></tr>
+                  <tr><td>Asterisk (*) & Pound (#)</td><td><kbd>*</kbd> and <kbd>#</kbd></td></tr>
+                  <tr><td>Close / Pause</td><td><kbd>Escape</kbd></td></tr>
+                </table>
+              </div>
+            </div>
+
+            <div class="faq-item">
+              <button class="faq-question">
+                <div class="faq-q-title">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                  <span>Can I upload and play my own .jar games?</span>
+                </div>
+                <span class="faq-toggle-icon">+</span>
+              </button>
+              <div class="faq-answer">
+                <p>Yes. Simply click the <strong>Upload .JAR</strong> button. If you are signed in with Google, your game file will be stored in your private cloud library and accessible across any of your devices.</p>
+              </div>
+            </div>
+
+            <div class="faq-item">
+              <button class="faq-question">
+                <div class="faq-q-title">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+                  <span>How does Sound and Audio work?</span>
+                </div>
+                <span class="faq-toggle-icon">+</span>
+              </button>
+              <div class="faq-answer">
+                <p>Modern web browsers require a user interaction to unlock audio playback. Click or tap once anywhere inside the game display to enable sound. The emulator includes MIDI synthesis and digital audio bridging.</p>
+              </div>
+            </div>
+
+            <div class="faq-item">
+              <button class="faq-question">
+                <div class="faq-q-title">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                  <span>What technology powers JarByVed?</span>
+                </div>
+                <span class="faq-toggle-icon">+</span>
+              </button>
+              <div class="faq-answer">
+                <p>JarByVed pairs <strong>CheerpJ</strong> (a WebAssembly JVM runtime) with <strong>FreeJ2ME</strong> to execute original bytecode directly client-side. Cloud persistence is backed by <strong>Firebase Firestore & Storage</strong>, and the interface architecture was engineered by <strong>Vedant Joliya</strong>.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- VIEW 3: SUPPORT VIEW                       -->
+        <!-- ========================================== -->
+        <section id="support-view" class="view-panel">
+          <div class="page-header">
+            <div class="hero-badge">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+              <span>HELP & INQUIRIES</span>
+            </div>
+            <h1 class="page-title">Support & Feedback</h1>
+            <p class="page-subtitle">Need help with a game, want to request a missing title, or report an emulation issue? Let's connect.</p>
+          </div>
+
+          <div class="support-grid">
+            <!-- Direct Contact Card -->
+            <div class="support-card contact-card">
+              <div class="card-icon-svg">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+              </div>
+              <h3>Direct Developer Contact</h3>
+              <p>Have an inquiry, collaboration idea, or feature suggestion? Reach out directly:</p>
+              <div class="contact-detail">
+                <span class="contact-label">Lead Developer</span>
+                <span class="contact-val">Vedant Joliya</span>
+              </div>
+              <div class="contact-detail">
+                <span class="contact-label">Email</span>
+                <a href="mailto:contactsvedant@gmail.com" class="contact-val email-link">contactsvedant@gmail.com</a>
+              </div>
+              <div class="contact-detail">
+                <span class="contact-label">Location</span>
+                <span class="contact-val">Parma, Italy / India</span>
+              </div>
+              <div class="contact-detail">
+                <span class="contact-label">Portfolio</span>
+                <a href="https://vedantjoliya.free.nf/" target="_blank" class="contact-val website-link">vedantjoliya.free.nf</a>
+              </div>
+              <a href="mailto:contactsvedant@gmail.com?subject=JarByVed%20Support%20Request" class="action-btn email-btn">
+                Send Direct Email
+              </a>
+            </div>
+
+            <!-- Feedback & Bug Report Form -->
+            <div class="support-card form-card">
+              <div class="card-icon-svg">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+              </div>
+              <h3>Send Feedback / Request a Game</h3>
+              <form id="supportForm" class="support-form">
+                <div class="form-group">
+                  <label for="feedbackType">Category</label>
+                  <select id="feedbackType" required>
+                    <option value="game_request">Request a Game</option>
+                    <option value="bug_report">Report a Bug / Crash</option>
+                    <option value="controls_issue">Mobile / Touch Controls Issue</option>
+                    <option value="cloud_save">Cloud Save Assistance</option>
+                    <option value="general">General Feedback</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="feedbackName">Your Name</label>
+                  <input type="text" id="feedbackName" placeholder="e.g. John Doe" required />
+                </div>
+                <div class="form-group">
+                  <label for="feedbackEmail">Your Email</label>
+                  <input type="email" id="feedbackEmail" placeholder="e.g. you@example.com" required />
+                </div>
+                <div class="form-group">
+                  <label for="feedbackMessage">Message / Game Details</label>
+                  <textarea id="feedbackMessage" rows="4" placeholder="Describe the issue or specify the game title and screen resolution..." required></textarea>
+                </div>
+                <button type="submit" class="action-btn submit-btn" id="submitFeedbackBtn">Submit Message</button>
+                <div id="feedbackResult" class="feedback-result" style="display: none;"></div>
+              </form>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- VIEW 4: ABOUT VIEW (VEDANT JOLIYA BIO)     -->
+        <!-- ========================================== -->
+        <section id="about-view" class="view-panel">
+          <div class="page-header">
+            <div class="hero-badge">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+              <span>CREATOR & PROJECT PROFILE</span>
+            </div>
+            <h1 class="page-title">About JarByVed & Vedant Joliya</h1>
+            <p class="page-subtitle">Preserving classic handheld and mobile culture through modern web technologies and cloud architectures.</p>
+          </div>
+
+          <!-- Creator Profile Card -->
+          <div class="about-hero-card">
+            <div class="creator-avatar-frame">
+              <img src="https://vedantjoliya.free.nf/profile.jpg" alt="Vedant Joliya" class="creator-avatar-img" onerror="this.src='/logo.png'" />
+              <div class="creator-status-badge">Available for Projects</div>
+            </div>
+            <div class="creator-info">
+              <h2 class="creator-name">Vedant Joliya</h2>
+              <p class="creator-role">Data Science Specialist &bull; Full-Stack Engineer &bull; UI/UX Product Designer</p>
+              <p class="creator-bio">
+                Analytical and detail-oriented technologist with a passion for transforming complex computational models and nostalgic software heritage into intuitive, high-performance web systems. Currently pursuing a <strong>Master of Science (M.Sc.) in Data Science for Management at the University of Parma (Università degli Studi di Parma, Italy)</strong>, with a Bachelor of Technology in Information Technology.
+              </p>
+              <div class="creator-links">
+                <a href="https://vedantjoliya.free.nf" target="_blank" class="bio-link portfolio-btn">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                  <span>Official Portfolio</span>
+                </a>
+                <a href="https://github.com/vedantjoliya/" target="_blank" class="bio-link">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+                  <span>GitHub</span>
+                </a>
+                <a href="https://linkedin.com/in/vedant-joliya" target="_blank" class="bio-link">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"></path><rect x="2" y="9" width="4" height="12"></rect><circle cx="4" cy="4" r="2"></circle></svg>
+                  <span>LinkedIn</span>
+                </a>
+                <a href="https://www.behance.net/vedantjoliya" target="_blank" class="bio-link">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9h4a2 2 0 0 1 2 2 2 2 0 0 1-2 2H3V9zm0 4h4.5a2.5 2.5 0 0 1 0 5H3v-5zM14 13h7M14 9h7"></path></svg>
+                  <span>Behance</span>
+                </a>
+                <a href="https://instagram.com/vedant.joliya" target="_blank" class="bio-link">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
+                  <span>Instagram</span>
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <!-- Academic & Professional Highlights Grid -->
+          <div class="bento-about-grid">
+            <div class="about-bento-item">
+              <div class="bento-icon-svg">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg>
+              </div>
+              <h3>Education & Credentials</h3>
+              <div class="edu-item">
+                <div class="edu-title">M.Sc. in Data Science for Management</div>
+                <div class="edu-school">Università degli Studi di Parma &bull; Parma, Italy (2025 – Present)</div>
+              </div>
+              <div class="edu-item">
+                <div class="edu-title">B.Tech in Information Technology</div>
+                <div class="edu-school">Gujarat Technological University &bull; 7.50 CGPA (2022 – 2025)</div>
+              </div>
+              <div class="edu-item">
+                <div class="edu-title">Diploma in Information Technology</div>
+                <div class="edu-school">Gujarat Technological University &bull; 7.31 CGPA (2018 – 2022)</div>
+              </div>
+            </div>
+
+            <div class="about-bento-item">
+              <div class="bento-icon-svg">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 19 21 12 17 5 21 12 2"></polygon></svg>
+              </div>
+              <h3>Featured Software Ecosystem</h3>
+              <div class="project-pill-list">
+                <a href="https://retrodesk.free.nf/" target="_blank" class="project-pill">
+                  <strong>Retro Desk</strong>: Nostalgic desktop OS web portfolio
+                </a>
+                <a href="https://apple.smart.my-board.org/" target="_blank" class="project-pill">
+                  <strong>Smart Dashboard</strong>: Flask real-time business analytics
+                </a>
+                <a href="https://aqi.is-best.net/" target="_blank" class="project-pill">
+                  <strong>AQI Dashboard</strong>: IoT Raspberry Pi + MATLAB hardware pipeline
+                </a>
+                <a href="https://instantcode.free.nf/" target="_blank" class="project-pill">
+                  <strong>InstantCode</strong>: Tech developer recruitment SaaS platform
+                </a>
+                <a href="https://snake.gamer.free/" target="_blank" class="project-pill">
+                  <strong>3D Brutalist Snake</strong>: Architectural WebGL arcade logic
+                </a>
+                <a href="https://3dsolar.gamer.free/" target="_blank" class="project-pill">
+                  <strong>Solar System 3D</strong>: Mathematical orbital simulator
+                </a>
+              </div>
+            </div>
+
+            <div class="about-bento-item span-full">
+              <div class="bento-icon-svg">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8h1a4 4 0 0 1 0 8h-1"></path><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="1" x2="6" y2="4"></line><line x1="10" y1="1" x2="10" y2="4"></line><line x1="14" y1="1" x2="14" y2="4"></line></svg>
+              </div>
+              <h3>The Story Behind JarByVed</h3>
+              <p>
+                In the 2000s, Java ME (J2ME) defined the mobile gaming revolution before the smartphone era. Games by Gameloft, Digital Chocolate, EA Mobile, and Macrospace pushed tiny 128x128 and 240x320 displays to their creative limits.
+              </p>
+              <p style="margin-top: 10px;">
+                <strong>JarByVed</strong> was engineered to preserve these 1,000+ legendary games permanently without requiring physical vintage handsets or cumbersome desktop Java setups. By pairing client-side WebAssembly execution with Google Firebase cloud sync, every nostalgic memory is preserved with modern cloud convenience.
+              </p>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <!-- Emulator Player Modal -->
+      <div id="playerModal" class="modal">
+        <div class="modal-content">
+          <div class="modal-bar">
+            <div class="modal-game-info">
+              <span class="modal-indicator"></span>
+              <span id="modalGameTitle" class="modal-title-text">Running Game</span>
+            </div>
+            <div class="modal-actions">
+              <button id="toggleFullscreenBtn" class="modal-action-icon" title="Toggle Fullscreen">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+              </button>
+              <button id="modalCloseBtn" class="modal-action-icon close-btn" title="Exit Game">&times;</button>
+            </div>
+          </div>
+          <iframe id="gameFrame" src="" frameborder="0" allowfullscreen></iframe>
+        </div>
+      </div>
+
+      <!-- Mobile Bottom Navigation Bar (Icons only, NO EMOJIS) -->
+      <nav class="mobile-bottom-nav">
+        <button class="bottom-nav-item active" data-target="games-view">
+          <span class="bottom-nav-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"></rect><path d="M6 12h4m-2-2v4m7-1h.01m2.99-2h.01"></path></svg>
+          </span>
+          <span class="bottom-nav-label">Games</span>
+        </button>
+        <button class="bottom-nav-item" data-target="faq-view">
+          <span class="bottom-nav-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+          </span>
+          <span class="bottom-nav-label">FAQ</span>
+        </button>
+        <button class="bottom-nav-item" data-target="support-view">
+          <span class="bottom-nav-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+          </span>
+          <span class="bottom-nav-label">Support</span>
+        </button>
+        <button class="bottom-nav-item" data-target="about-view">
+          <span class="bottom-nav-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          </span>
+          <span class="bottom-nav-label">About</span>
+        </button>
+      </nav>
+
+      <!-- Footer -->
+      <footer class="app-footer">
+        <div class="footer-content">
+          <div class="footer-brand">
+            <img src="/logo.png" alt="JarByVed" class="footer-logo" />
+            <div>
+              <h3>JarByVed</h3>
+              <p>Classic Java ME Cloud Emulator Platform</p>
+            </div>
+          </div>
+          <div class="footer-links">
+            <a href="https://vedantjoliya.free.nf" target="_blank">Vedant Joliya Portfolio</a>
+            <a href="mailto:contactsvedant@gmail.com">Contact Support</a>
+            <a href="https://github.com/vedantjoliya/" target="_blank">GitHub</a>
+            <a href="https://linkedin.com/in/vedant-joliya" target="_blank">LinkedIn</a>
+          </div>
+          <div class="footer-copyright">
+            &copy; 2026 <strong>JarByVed</strong>. Developed by <a href="https://vedantjoliya.free.nf" target="_blank">Vedant Joliya</a>. All game copyrights belong to their respective original publishers.
+          </div>
+        </div>
+      </footer>
+    </div>
+
+    <!-- Main Module Script -->
+    <script type="module" src="/main.js"></script>
+  </body>
+</html>
