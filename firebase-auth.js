@@ -299,7 +299,7 @@ export async function getPreferences() {
   return prefs;
 }
 
-export async function savePreferences(prefs) {
+export function savePreferences(prefs) {
   try {
     localStorage.setItem('jarbyved_prefs', JSON.stringify(prefs));
   } catch(e) {}
@@ -307,8 +307,10 @@ export async function savePreferences(prefs) {
   if (!currentUser) return;
   try {
     const docRef = doc(db, "saves", currentUser.uid);
-    await setDoc(docRef, { preferences: prefs }, { merge: true });
+    setDoc(docRef, { preferences: prefs }, { merge: true }).catch(err => {
+      console.warn("Background preferences sync:", err.message);
+    });
   } catch(e) {
-    console.error("Error saving preferences:", e);
+    console.warn("Preferences sync error:", e);
   }
 }

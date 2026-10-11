@@ -402,7 +402,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       : `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"></rect><path d="M6 12h4m-2-2v4m7-1h.01m2.99-2h.01"></path></svg>`;
 
     card.innerHTML = `
-      <div class="fav-btn" title="Toggle Favorite">
+      <div class="fav-btn" data-id="${game.id}" title="Toggle Favorite">
         <svg class="fav-star-icon" width="20" height="20" viewBox="0 0 24 24" fill="${isFav ? '#ffc107' : 'none'}" stroke="${isFav ? '#ffc107' : 'rgba(255,255,255,0.35)'}" stroke-width="2">
           <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
         </svg>
@@ -441,24 +441,54 @@ document.addEventListener('DOMContentLoaded', async () => {
     container.appendChild(card);
   }
 
-  async function toggleFavorite(game) {
-    const idx = prefs.favorites.indexOf(game.id);
-    if (idx >= 0) {
-      prefs.favorites.splice(idx, 1);
-    } else {
+  function toggleFavorite(game) {
+    const isNowFav = !prefs.favorites.includes(game.id);
+    if (isNowFav) {
       prefs.favorites.push(game.id);
+    } else {
+      prefs.favorites = prefs.favorites.filter(id => id !== game.id);
     }
-    await savePreferences(prefs);
+
+    // 1. Instant optimistic visual star toggle across all cards on screen
+    document.querySelectorAll(`.fav-btn[data-id="${game.id}"] .fav-star-icon`).forEach(starSvg => {
+      starSvg.setAttribute('fill', isNowFav ? '#ffc107' : 'none');
+      starSvg.setAttribute('stroke', isNowFav ? '#ffc107' : 'rgba(255,255,255,0.35)');
+    });
+
+    // 2. Instant badge update
     updateBadges();
-    renderAll();
+
+    // 3. Instant shelf update
+    if (activeFilter === 'favs') {
+      renderAll();
+    } else if (activeFilter === 'all' && !searchQuery) {
+      updateFavShelf();
+    }
+
+    // 4. Non-blocking background save
+    savePreferences(prefs);
   }
 
-  async function addToRecents(game) {
+  function updateFavShelf() {
+    const favGames = prefs.favorites.map(id => allGames.find(g => g.id === id) || allCustomGames.find(g => g.id === id)).filter(Boolean);
+    if (favGames.length > 0) {
+      favSection.style.display = 'block';
+      favGamesGrid.innerHTML = '';
+      favGames.slice(0, 8).forEach(g => {
+        renderGameCard(g, favGamesGrid, allCustomGames.some(c => c.id === g.id));
+      });
+    } else {
+      favSection.style.display = 'none';
+      favGamesGrid.innerHTML = '';
+    }
+  }
+
+  function addToRecents(game) {
     prefs.recents = prefs.recents.filter(id => id !== game.id);
     prefs.recents.unshift(game.id);
     if (prefs.recents.length > 20) prefs.recents.pop();
-    await savePreferences(prefs);
     updateBadges();
+    savePreferences(prefs);
   }
 
   // ==========================================
