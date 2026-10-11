@@ -29,6 +29,8 @@ export const codeMap = {
     'Numpad9': 105,
     'NumpadDivide': 111,
     'NumpadMultiply': 106,
+    'NumpadAsterisk': 106,
+    'NumpadStar': 106,
     'F1': 112,
     'F2': 113,
     'F3': 114,

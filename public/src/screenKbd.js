@@ -87,13 +87,25 @@ function handleTouchEnd(e) {
 }
 
 export function initKbdListeners() {
-    // Add touch event listeners to keypad areas
+    // Add touch and mouse event listeners to keypad areas
     const keypads = document.querySelectorAll('.keypad-part');
     keypads.forEach(keypad => {
         keypad.addEventListener('touchstart', handleTouchStart, { passive: false });
         keypad.addEventListener('touchmove', handleTouchMove, { passive: false });
         keypad.addEventListener('touchend', handleTouchEnd, { passive: false });
         keypad.addEventListener('touchcancel', handleTouchEnd, { passive: false });
+    });
+
+    // Also support mouse clicks/drags on desktop / hybrid laptops
+    document.querySelectorAll('.key').forEach(btn => {
+        btn.addEventListener('mousedown', (e) => {
+            activateKey(btn);
+            const onUp = () => {
+                deactivateKey(btn);
+                window.removeEventListener('mouseup', onUp);
+            };
+            window.addEventListener('mouseup', onUp);
+        });
     });
 }
 

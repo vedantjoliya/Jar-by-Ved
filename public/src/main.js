@@ -58,10 +58,9 @@ function autoscale() {
         scale = scale|0;
     }
 
+    display.currentScale = scale;
     display.style.transform = `scale(${scale})`;
     display.style.transformOrigin = 'center center';
-    // Remove the old zoom property as it is buggy in some browsers
-    // display.style.zoom = scale;
 }
 
 function setListeners() {
@@ -69,7 +68,14 @@ function setListeners() {
     let noMouse = false;
 
     setKbdHandler((isDown, key) => {
-        const symbol = key.startsWith('Digit') ? key.substring(5) : '\x00';
+        let symbol = '\x00';
+        if (key.startsWith('Digit')) {
+            symbol = key.substring(5);
+        } else if (key === 'NumpadAsterisk' || key === 'NumpadMultiply') {
+            symbol = '*';
+        } else if (key === 'NumpadDivide') {
+            symbol = '#';
+        }
         keyRepeatManager.post(isDown, key, {symbol, ctrlKey: false, shiftKey: false});
     });
 
@@ -97,7 +103,6 @@ function setListeners() {
                 autoscale();
             }
         } else if (codeMap[key]) {
-            console.log('queuin event');
             evtQueue.queueEvent({
                 kind: kind === 'up' ? 'keyup' : 'keydown',
                 args: [codeMap[key], args.symbol, args.ctrlKey, args.shiftKey]
@@ -105,18 +110,30 @@ function setListeners() {
         }
     });
 
+    function getCanvasCoords(clientX, clientY) {
+        const rect = display.getBoundingClientRect();
+        const rawX = clientX - rect.left;
+        const rawY = clientY - rect.top;
+        const scaleX = display.width / rect.width;
+        const scaleY = display.height / rect.height;
+        return {
+            x: Math.max(0, Math.min(display.width - 1, Math.floor(rawX * scaleX))),
+            y: Math.max(0, Math.min(display.height - 1, Math.floor(rawY * scaleY)))
+        };
+    }
+
     display.addEventListener('mousedown', async e => {
         display.focus();
         if (noMouse) return;
 
+        const coords = getCanvasCoords(e.clientX, e.clientY);
         evtQueue.queueEvent({
             kind: 'pointerpressed',
-            x: e.offsetX / display.currentCSSZoom | 0,
-            y: e.offsetY / display.currentCSSZoom | 0,
+            x: coords.x,
+            y: coords.y,
         });
 
         mouseDown = true;
-
         e.preventDefault();
     });
 
@@ -124,10 +141,11 @@ function setListeners() {
         if (noMouse) return;
         if (!mouseDown) return;
 
+        const coords = getCanvasCoords(e.clientX, e.clientY);
         evtQueue.queueEvent({
             kind: 'pointerdragged',
-            x: e.offsetX / display.currentCSSZoom | 0,
-            y: e.offsetY / display.currentCSSZoom | 0,
+            x: coords.x,
+            y: coords.y,
         });
 
         e.preventDefault();
@@ -138,26 +156,29 @@ function setListeners() {
         if (!mouseDown) return;
 
         mouseDown = false;
-
+        const coords = getCanvasCoords(e.clientX, e.clientY);
         evtQueue.queueEvent({
             kind: 'pointerreleased',
-            x: (e.pageX - display.offsetLeft) / display.currentCSSZoom | 0,
-            y: (e.pageY - display.offsetTop) / display.currentCSSZoom | 0,
+            x: coords.x,
+            y: coords.y,
         });
 
         e.preventDefault();
     });
 
-
     display.addEventListener('touchstart', async e => {
         display.focus();
         noMouse = true;
 
-        evtQueue.queueEvent({
-            kind: 'pointerpressed',
-            x: (e.changedTouches[0].pageX - display.offsetLeft) / display.currentCSSZoom | 0,
-            y: (e.changedTouches[0].pageY - display.offsetTop) / display.currentCSSZoom | 0,
-        });
+        if (e.changedTouches.length > 0) {
+            const touch = e.changedTouches[0];
+            const coords = getCanvasCoords(touch.clientX, touch.clientY);
+            evtQueue.queueEvent({
+                kind: 'pointerpressed',
+                x: coords.x,
+                y: coords.y,
+            });
+        }
 
         e.preventDefault();
     }, {passive: false});
@@ -165,11 +186,15 @@ function setListeners() {
     display.addEventListener('touchmove', async e => {
         noMouse = true;
 
-        evtQueue.queueEvent({
-            kind: 'pointerdragged',
-            x: (e.changedTouches[0].pageX - display.offsetLeft) / display.currentCSSZoom | 0,
-            y: (e.changedTouches[0].pageY - display.offsetTop) / display.currentCSSZoom | 0,
-        });
+        if (e.changedTouches.length > 0) {
+            const touch = e.changedTouches[0];
+            const coords = getCanvasCoords(touch.clientX, touch.clientY);
+            evtQueue.queueEvent({
+                kind: 'pointerdragged',
+                x: coords.x,
+                y: coords.y,
+            });
+        }
 
         e.preventDefault();
     }, {passive: false});
@@ -177,14 +202,34 @@ function setListeners() {
     display.addEventListener('touchend', async e => {
         noMouse = true;
 
-        evtQueue.queueEvent({
-            kind: 'pointerreleased',
-            x: (e.changedTouches[0].pageX - display.offsetLeft) / display.currentCSSZoom | 0,
-            y: (e.changedTouches[0].pageY - display.offsetTop) / display.currentCSSZoom | 0,
-        });
+        if (e.changedTouches.length > 0) {
+            const touch = e.changedTouches[0];
+            const coords = getCanvasCoords(touch.clientX, touch.clientY);
+            evtQueue.queueEvent({
+                kind: 'pointerreleased',
+                x: coords.x,
+                y: coords.y,
+            });
+        }
 
         e.preventDefault();
-    });
+    }, {passive: false});
+    
+    display.addEventListener('touchcancel', async e => {
+        noMouse = true;
+
+        if (e.changedTouches.length > 0) {
+            const touch = e.changedTouches[0];
+            const coords = getCanvasCoords(touch.clientX, touch.clientY);
+            evtQueue.queueEvent({
+                kind: 'pointerreleased',
+                x: coords.x,
+                y: coords.y,
+            });
+        }
+
+        e.preventDefault();
+    }, {passive: false});
 
     document.addEventListener('mousedown', e => {
         console.log('refocus');
