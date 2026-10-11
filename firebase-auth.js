@@ -24,64 +24,166 @@ const provider = new GoogleAuthProvider();
 export let currentUser = null;
 let syncUnsubscribe = null;
 
-// IndexedDB Helper for CheerpJ File System Sync
+// Comprehensive IndexedDB Helper for CheerpJ File System Sync
+// Exports ALL databases and stores (including /files/, /str/, and CheerpJ persistent filesystem)
 async function exportCheerpJDB() {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open('/str/');
-    request.onerror = (e) => resolve(null); // Return null if not found
-    request.onsuccess = (e) => {
+  try {
+    const dbs = await (indexedDB.databases ? indexedDB.databases() : Promise.resolve([{ name: '/files/' }, { name: '/str/' }]));
+    const dbList = dbs && dbs.length ? dbs.map(d => d.name).filter(Boolean) : ['/files/', '/str/'];
+    if (!dbList.includes('/files/')) dbList.push('/files/');
+    if (!dbList.includes('/str/')) dbList.push('/str/');
+
+    const exportBundle = {};
+
+    for (const dbName of dbList) {
+      const dbData = await new Promise((resolve) => {
+        const req = indexedDB.open(dbName);
+        req.onerror = () => resolve(null);
+        req.onsuccess = (e) => {
+          const db = e.target.result;
+          const storeNames = Array.from(db.objectStoreNames);
+          if (!storeNames.length) {
+            db.close();
+            return resolve(null);
+          }
+          const tx = db.transaction(storeNames, 'readonly');
+          const storesData = {};
+          let remaining = storeNames.length;
+
+          storeNames.forEach((sName) => {
+            const store = tx.objectStore(sName);
+            const allReq = store.getAll();
+            const keysReq = store.getAllKeys();
+            allReq.onsuccess = () => {
+              keysReq.onsuccess = () => {
+                const map = {};
+                keysReq.result.forEach((k, i) => {
+                  const val = allReq.result[i];
+                  // If Uint8Array or ArrayBuffer, convert to regular array for JSON serialization
+                  if (val && val.contents && (val.contents instanceof Uint8Array || Array.isArray(val.contents))) {
+                    map[k] = { ...val, contents: Array.from(val.contents) };
+                  } else if (val instanceof Uint8Array) {
+                    map[k] = { __type: 'Uint8Array', data: Array.from(val) };
+                  } else if (val instanceof ArrayBuffer) {
+                    map[k] = { __type: 'ArrayBuffer', data: Array.from(new Uint8Array(val)) };
+                  } else {
+                    map[k] = val;
+                  }
+                });
+                storesData[sName] = map;
+                remaining--;
+                if (remaining === 0) {
+                  db.close();
+                  resolve(storesData);
+                }
+              };
+            };
+            allReq.onerror = () => {
+              remaining--;
+              if (remaining === 0) {
+                db.close();
+                resolve(storesData);
+              }
+            };
+          });
+        };
+      });
+
+      if (dbData && Object.keys(dbData).length > 0) {
+        exportBundle[dbName] = dbData;
+      }
+    }
+
+    return Object.keys(exportBundle).length > 0 ? exportBundle : null;
+  } catch (err) {
+    console.warn("exportCheerpJDB error:", err);
+    return null;
+  }
+}
+
+async function importCheerpJDB(exportBundle) {
+  if (!exportBundle || typeof exportBundle !== 'object') return;
+  try {
+    for (const [dbName, storesData] of Object.entries(exportBundle)) {
+      if (!storesData || typeof storesData !== 'object') continue;
+      
+      // Legacy backward-compatibility: if export was directly files map for /str/
+      if (dbName.startsWith('/') && !storesData.files && typeof storesData === 'object' && Object.values(storesData).some(v => v && (v.contents || v.type))) {
+        await restoreSingleStore(dbName, 'files', storesData);
+        continue;
+      }
+
+      for (const [storeName, records] of Object.entries(storesData)) {
+        await restoreSingleStore(dbName, storeName, records);
+      }
+    }
+  } catch (err) {
+    console.warn("importCheerpJDB error:", err);
+  }
+}
+
+function restoreSingleStore(dbName, storeName, records) {
+  return new Promise((resolve) => {
+    // Open with version upgrade handler if store missing
+    const req = indexedDB.open(dbName);
+    req.onupgradeneeded = (e) => {
       const db = e.target.result;
-      if (!db.objectStoreNames.contains('files')) {
+      if (!db.objectStoreNames.contains(storeName)) {
+        db.createObjectStore(storeName);
+      }
+    };
+    req.onerror = () => resolve();
+    req.onsuccess = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(storeName)) {
+        const nextVersion = (db.version || 1) + 1;
         db.close();
-        resolve(null);
+        const upReq = indexedDB.open(dbName, nextVersion);
+        upReq.onupgradeneeded = (ev) => {
+          const uDb = ev.target.result;
+          if (!uDb.objectStoreNames.contains(storeName)) {
+            uDb.createObjectStore(storeName);
+          }
+        };
+        upReq.onsuccess = (ev) => {
+          writeRecords(ev.target.result, storeName, records).then(resolve);
+        };
+        upReq.onerror = () => resolve();
         return;
       }
-      const tx = db.transaction('files', 'readonly');
-      const store = tx.objectStore('files');
-      const allReq = store.getAll();
-      const keysReq = store.getAllKeys();
-      
-      tx.oncomplete = () => {
-        const data = {};
-        keysReq.result.forEach((k, i) => {
-          data[k] = allReq.result[i];
-        });
-        db.close();
-        resolve(data);
-      };
+      writeRecords(db, storeName, records).then(resolve);
     };
   });
 }
 
-async function importCheerpJDB(data) {
-  if (!data || Object.keys(data).length === 0) return;
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open('/str/');
-    request.onupgradeneeded = (e) => {
-      const db = e.target.result;
-      if (!db.objectStoreNames.contains('files')) {
-        db.createObjectStore('files');
+function writeRecords(db, storeName, records) {
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction(storeName, 'readwrite');
+      const store = tx.objectStore(storeName);
+      for (const [k, rawVal] of Object.entries(records)) {
+        let val = rawVal;
+        if (rawVal && rawVal.__type === 'Uint8Array') {
+          val = new Uint8Array(rawVal.data);
+        } else if (rawVal && rawVal.__type === 'ArrayBuffer') {
+          val = new Uint8Array(rawVal.data).buffer;
+        } else if (rawVal && rawVal.contents && Array.isArray(rawVal.contents)) {
+          val = { ...rawVal, contents: new Uint8Array(rawVal.contents) };
+        }
+        store.put(val, k);
       }
-    };
-    request.onsuccess = (e) => {
-      const db = e.target.result;
-      if (!db.objectStoreNames.contains('files')) {
-        db.close();
-        resolve();
-        return;
-      }
-      const tx = db.transaction('files', 'readwrite');
-      const store = tx.objectStore('files');
-      
-      for (const [key, value] of Object.entries(data)) {
-        store.put(value, key);
-      }
-      
       tx.oncomplete = () => {
         db.close();
         resolve();
       };
-    };
+      tx.onerror = () => {
+        db.close();
+        resolve();
+      };
+    } catch (e) {
+      db.close();
+      resolve();
+    }
   });
 }
 
@@ -90,23 +192,12 @@ export async function syncToCloud() {
   try {
     const data = await exportCheerpJDB();
     if (data) {
-      // Convert Uint8Arrays/Blobs to Arrays for Firestore JSON
-      const serialized = {};
-      for (const [k, v] of Object.entries(data)) {
-        if (v && v.contents) {
-          const arr = Array.from(v.contents);
-          serialized[k] = { ...v, contents: arr };
-        } else {
-          serialized[k] = v;
-        }
-      }
-      
       const docRef = doc(db, "saves", currentUser.uid);
       await setDoc(docRef, {
-        cheerpjStr: JSON.stringify(serialized),
+        cheerpjStr: JSON.stringify(data),
         timestamp: new Date().toISOString()
-      }, { merge: true }); // Crucial: merge preserves preferences and customGames!
-      console.log('Saved game state to cloud!');
+      }, { merge: true }); // Merge preserves preferences, customGames, and game save progress!
+      console.log('Saved game state and saves to cloud!');
     }
   } catch (e) {
     console.warn("Cloud save error:", e.message);
@@ -122,16 +213,8 @@ export async function loadFromCloud() {
       const saved = docSnap.data().cheerpjStr;
       if (saved) {
         const parsed = JSON.parse(saved);
-        const data = {};
-        for (const [k, v] of Object.entries(parsed)) {
-          if (v && v.contents) {
-            data[k] = { ...v, contents: new Uint8Array(v.contents) };
-          } else {
-            data[k] = v;
-          }
-        }
-        await importCheerpJDB(data);
-        console.log('Loaded game state from cloud!');
+        await importCheerpJDB(parsed);
+        console.log('Loaded game saves and progress from cloud!');
       }
     }
   } catch (e) {
@@ -210,16 +293,10 @@ export function setupAuth(uiElements, onReady, onRemoteSync) {
             if (data.cheerpjStr) {
               try {
                 const parsed = JSON.parse(data.cheerpjStr);
-                const cheerpjData = {};
-                for (const [k, v] of Object.entries(parsed)) {
-                  if (v && v.contents) {
-                    cheerpjData[k] = { ...v, contents: new Uint8Array(v.contents) };
-                  } else {
-                    cheerpjData[k] = v;
-                  }
-                }
-                await importCheerpJDB(cheerpjData);
-              } catch(e) {}
+                await importCheerpJDB(parsed);
+              } catch(e) {
+                console.warn("Real-time CheerpJ save import error:", e);
+              }
             }
 
             if (onRemoteSync) {
