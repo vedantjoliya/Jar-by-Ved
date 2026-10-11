@@ -530,12 +530,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     playerModal.classList.remove('show');
     modalContent.classList.remove('fullscreen-active');
     
-    // Save current game state & sync progress to cloud immediately
-    try {
-      await syncToCloud();
-    } catch (e) {
-      console.warn("Auto sync on close error:", e);
-    }
+    // Sync progress to cloud on exit
+    await syncToCloud();
 
     setTimeout(() => {
       gameFrame.src = '';
@@ -543,17 +539,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       renderAll();
     }, 300);
   }
-
-  // Also sync when switching tabs or closing browser
-  window.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') {
-      syncToCloud();
-    }
-  });
-
-  window.addEventListener('beforeunload', () => {
-    syncToCloud();
-  });
 
   modalCloseBtn.addEventListener('click', closeModal);
 
