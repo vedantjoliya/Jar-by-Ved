@@ -1,4 +1,4 @@
-import { setupAuth, syncToCloud, loadFromCloud, uploadCustomGame, getCustomGames, currentUser, getPreferences, savePreferences } from './firebase-auth.js';
+import { setupAuth, syncToCloud, uploadCustomGame, getCustomGames, currentUser, getPreferences, savePreferences } from './firebase-auth.js';
 
 let allGames = [];
 let allCustomGames = [];
@@ -56,7 +56,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const modalContent = playerModal.querySelector('.modal-content');
   const modalGameTitle = document.getElementById('modalGameTitle');
   const modalCloseBtn = document.getElementById('modalCloseBtn');
-  const modalSyncBtn = document.getElementById('modalSyncBtn');
   const toggleFullscreenBtn = document.getElementById('toggleFullscreenBtn');
   const gameFrame = document.getElementById('gameFrame');
 
@@ -507,7 +506,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ==========================================
   // 6. Game Player Modal
   // ==========================================
-  async function openGame(game, isCustom = false) {
+  function openGame(game, isCustom = false) {
     const jarTarget = isCustom ? game.url : game.file;
     const gameName = game.name || game.file;
 
@@ -520,15 +519,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (window.innerWidth <= 1024);
     if (isTouchDevice) {
       url.searchParams.set('mobile', 'true');
-    }
-
-    // Ensure latest saves and progress from other devices are loaded
-    if (currentUser) {
-      try {
-        await loadFromCloud();
-      } catch(e) {
-        console.warn("Cloud load before launch error:", e);
-      }
     }
 
     gameFrame.src = url.toString();
@@ -566,25 +556,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   modalCloseBtn.addEventListener('click', closeModal);
-
-  if (modalSyncBtn) {
-    modalSyncBtn.addEventListener('click', async () => {
-      modalSyncBtn.style.opacity = '0.5';
-      modalSyncBtn.style.pointerEvents = 'none';
-      try {
-        await syncToCloud();
-        modalSyncBtn.style.color = '#22c55e';
-        setTimeout(() => {
-          modalSyncBtn.style.color = '';
-          modalSyncBtn.style.opacity = '1';
-          modalSyncBtn.style.pointerEvents = '';
-        }, 1200);
-      } catch (e) {
-        modalSyncBtn.style.opacity = '1';
-        modalSyncBtn.style.pointerEvents = '';
-      }
-    });
-  }
 
   playerModal.addEventListener('click', (e) => {
     if (e.target === playerModal) {
