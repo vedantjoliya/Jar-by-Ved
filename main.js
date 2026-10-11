@@ -171,6 +171,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     updateBadges();
     renderAll();
+  }, async (cloudData) => {
+    // Cross-device sync handler: runs automatically when data changes on laptop/mobile
+    if (cloudData) {
+      if (cloudData.preferences) {
+        prefs = cloudData.preferences;
+      }
+      if (cloudData.customGames) {
+        allCustomGames = cloudData.customGames;
+      }
+      updateBadges();
+      renderAll();
+    }
   });
 
   async function loadCustomGames() {

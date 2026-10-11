@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, updateDoc, arrayUnion, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-storage.js";
 
 const env = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env : {};
@@ -22,6 +22,7 @@ const storage = getStorage(app);
 const provider = new GoogleAuthProvider();
 
 export let currentUser = null;
+let syncUnsubscribe = null;
 
 // IndexedDB Helper for CheerpJ File System Sync
 async function exportCheerpJDB() {
@@ -89,7 +90,7 @@ export async function syncToCloud() {
   try {
     const data = await exportCheerpJDB();
     if (data) {
-      // Convert Uint8Arrays/Blobs to Base64 for Firestore
+      // Convert Uint8Arrays/Blobs to Arrays for Firestore JSON
       const serialized = {};
       for (const [k, v] of Object.entries(data)) {
         if (v && v.contents) {
@@ -100,14 +101,15 @@ export async function syncToCloud() {
         }
       }
       
-      await setDoc(doc(db, "saves", currentUser.uid), {
+      const docRef = doc(db, "saves", currentUser.uid);
+      await setDoc(docRef, {
         cheerpjStr: JSON.stringify(serialized),
         timestamp: new Date().toISOString()
-      });
-      console.log('Saved to cloud!');
+      }, { merge: true }); // Crucial: merge preserves preferences and customGames!
+      console.log('Saved game state to cloud!');
     }
   } catch (e) {
-    console.error("Sync error:", e);
+    console.warn("Cloud save error:", e.message);
   }
 }
 
@@ -120,7 +122,6 @@ export async function loadFromCloud() {
       const saved = docSnap.data().cheerpjStr;
       if (saved) {
         const parsed = JSON.parse(saved);
-        // Convert Arrays back to Uint8Arrays
         const data = {};
         for (const [k, v] of Object.entries(parsed)) {
           if (v && v.contents) {
@@ -130,16 +131,15 @@ export async function loadFromCloud() {
           }
         }
         await importCheerpJDB(data);
-        console.log('Loaded from cloud!');
+        console.log('Loaded game state from cloud!');
       }
     }
   } catch (e) {
-    console.error("Load error:", e);
+    console.warn("Cloud load error:", e.message);
   }
 }
 
-export function setupAuth(uiElements, onReady) {
-  // Support both legacy (authBtn, userNameEl) and new object config { authBtn, profileContainer, ... }
+export function setupAuth(uiElements, onReady, onRemoteSync) {
   const authBtn = uiElements.authBtn || uiElements;
   const userProfile = uiElements.profileContainer || null;
   const userAvatar = uiElements.userAvatar || null;
@@ -182,9 +182,61 @@ export function setupAuth(uiElements, onReady) {
       if (userProfile) {
         userProfile.style.display = 'flex';
       }
+      
+      // Load initial state
       await loadFromCloud();
       if (onReady) onReady(user);
+
+      // REAL-TIME CROSS-DEVICE SYNC LISTENER
+      if (syncUnsubscribe) syncUnsubscribe();
+      try {
+        const docRef = doc(db, "saves", user.uid);
+        syncUnsubscribe = onSnapshot(docRef, async (docSnap) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            let hasChanged = false;
+
+            // 1. Sync preferences (favorites & recents) across devices
+            if (data.preferences) {
+              const localStr = localStorage.getItem('jarbyved_prefs') || '{}';
+              const cloudStr = JSON.stringify(data.preferences);
+              if (localStr !== cloudStr) {
+                localStorage.setItem('jarbyved_prefs', cloudStr);
+                hasChanged = true;
+              }
+            }
+
+            // 2. Sync CheerpJ save data across devices
+            if (data.cheerpjStr) {
+              try {
+                const parsed = JSON.parse(data.cheerpjStr);
+                const cheerpjData = {};
+                for (const [k, v] of Object.entries(parsed)) {
+                  if (v && v.contents) {
+                    cheerpjData[k] = { ...v, contents: new Uint8Array(v.contents) };
+                  } else {
+                    cheerpjData[k] = v;
+                  }
+                }
+                await importCheerpJDB(cheerpjData);
+              } catch(e) {}
+            }
+
+            if (onRemoteSync) {
+              onRemoteSync(data, hasChanged);
+            }
+          }
+        }, (err) => {
+          console.warn("Real-time cloud sync notice:", err.message);
+        });
+      } catch (err) {
+        console.warn("Could not attach onSnapshot:", err);
+      }
     } else {
+      if (syncUnsubscribe) {
+        syncUnsubscribe();
+        syncUnsubscribe = null;
+      }
       currentUser = null;
       if (authBtn) {
         authBtn.innerHTML = `
