@@ -277,120 +277,182 @@ async function ensureAppInstalled(lib, appId) {
     }
 }
 
-async function init() {
-    document.getElementById("loading").textContent = "Loading CheerpJ...";
+function updateLoadingStatus(status, sub = '') {
+    const statusEl = document.getElementById('loading-status');
+    const subEl = document.getElementById('loading-sub');
+    if (statusEl) statusEl.textContent = status;
+    if (subEl && sub) subEl.textContent = sub;
+}
 
+function showLoadingError(title, detail = '') {
+    const statusEl = document.getElementById('loading-status');
+    const subEl = document.getElementById('loading-sub');
+    const spinnerEl = document.getElementById('loading-spinner');
+    const retryBtn = document.getElementById('loading-retry');
+    if (statusEl) statusEl.textContent = title;
+    if (subEl) subEl.textContent = detail || 'Please check your connection and tap retry.';
+    if (spinnerEl) spinnerEl.style.display = 'none';
+    if (retryBtn) retryBtn.style.display = 'inline-flex';
+}
+
+async function init() {
     display = document.getElementById('display');
     screenCtx = display.getContext('2d');
 
     setListeners();
 
-    window.libmidi = new LibMidi(createUnlockingAudioContext());
-    await window.libmidi.init();
-    window.libmidi.midiPlayer.addEventListener('end-of-media', e => {
-        window.evtQueue.queueEvent({kind: 'player-eom', player: e.target});
-    })
+    // 1. Safe Non-blocking Audio Initialization
+    try {
+        updateLoadingStatus("Starting Audio Subsystem...", "Initializing audio engine");
+        const audioCtx = createUnlockingAudioContext();
+        window.libmidi = new LibMidi(audioCtx);
+        await Promise.race([
+            window.libmidi.init(),
+            new Promise(r => setTimeout(r, 2000))
+        ]);
+        if (window.libmidi && window.libmidi.midiPlayer) {
+            window.libmidi.midiPlayer.addEventListener('end-of-media', e => {
+                window.evtQueue.queueEvent({kind: 'player-eom', player: e.target});
+            });
+        }
+    } catch (e) {
+        console.warn("MIDI Audio init notice (continuing safely):", e);
+    }
     window.libmedia = new LibMedia();
 
-    await cheerpjInit({
-        enableDebug: false,
-        natives: {
-            ...canvasFontNatives,
-            ...canvasGraphicsNatives,
-            ...gles2Natives,
-            ...jsReferenceNatives,
-            ...mediaBridgeNatives,
-            ...midiBridgeNatives,
-            async Java_pl_zb3_freej2me_bridge_shell_Shell_setTitle(lib, title) {
-                document.title = title;
-            },
-            async Java_pl_zb3_freej2me_bridge_shell_Shell_setIcon(lib, iconBytes) {
-                if (iconBytes) {
-                    setFaviconFromBuffer(iconBytes.buffer);
-                }
-            },
-            async Java_pl_zb3_freej2me_bridge_shell_Shell_getScreenCtx(lib) {
-                return screenCtx;
-            },
-            async Java_pl_zb3_freej2me_bridge_shell_Shell_setCanvasSize(lib, width, height) {
-                if (!scaleSet) {
-                    document.getElementById('loading').hidden = true;
-                    display.style.display = '';
-                    scaleSet = true;
-                    display.focus();
-                }
-                screenCtx.canvas.width = width;
-                screenCtx.canvas.height = height;
-                autoscale();
-            },
-            async Java_pl_zb3_freej2me_bridge_shell_Shell_waitForAndDispatchEvents(lib, listener) {
-                const KeyEvent = await lib.pl.zb3.freej2me.bridge.shell.KeyEvent;
-                const PointerEvent = await lib.pl.zb3.freej2me.bridge.shell.PointerEvent;
+    // 2. Initialize CheerpJ JVM with full error recovery
+    updateLoadingStatus("Initializing CheerpJ JVM...", "Setting up WebAssembly runtime");
+    try {
+        await cheerpjInit({
+            enableDebug: false,
+            natives: {
+                ...canvasFontNatives,
+                ...canvasGraphicsNatives,
+                ...gles2Natives,
+                ...jsReferenceNatives,
+                ...mediaBridgeNatives,
+                ...midiBridgeNatives,
+                async Java_pl_zb3_freej2me_bridge_shell_Shell_setTitle(lib, title) {
+                    document.title = title;
+                },
+                async Java_pl_zb3_freej2me_bridge_shell_Shell_setIcon(lib, iconBytes) {
+                    if (iconBytes) {
+                        setFaviconFromBuffer(iconBytes.buffer);
+                    }
+                },
+                async Java_pl_zb3_freej2me_bridge_shell_Shell_getScreenCtx(lib) {
+                    return screenCtx;
+                },
+                async Java_pl_zb3_freej2me_bridge_shell_Shell_setCanvasSize(lib, width, height) {
+                    if (!scaleSet) {
+                        const loadingEl = document.getElementById('loading');
+                        if (loadingEl) loadingEl.style.display = 'none';
+                        display.style.display = '';
+                        scaleSet = true;
+                        display.focus();
+                    }
+                    screenCtx.canvas.width = width;
+                    screenCtx.canvas.height = height;
+                    autoscale();
+                },
+                async Java_pl_zb3_freej2me_bridge_shell_Shell_waitForAndDispatchEvents(lib, listener) {
+                    const KeyEvent = await lib.pl.zb3.freej2me.bridge.shell.KeyEvent;
+                    const PointerEvent = await lib.pl.zb3.freej2me.bridge.shell.PointerEvent;
 
-                const evt = await evtQueue.waitForEvent();
-                if (evt.kind == 'keydown') {
-                    await listener.keyPressed(await new KeyEvent(...evt.args));
-                } else if (evt.kind == 'keyup') {
-                    await listener.keyReleased(await new KeyEvent(...evt.args));
-                } else if (evt.kind == 'pointerpressed') {
-                    await listener.pointerPressed(await new PointerEvent(evt.x, evt.y));
-                } else if (evt.kind == 'pointerdragged') {
-                    await listener.pointerDragged(await new PointerEvent(evt.x, evt.y));
-                } else if (evt.kind == 'pointerreleased') {
-                    await listener.pointerReleased(await new PointerEvent(evt.x, evt.y));
-                } else if (evt.kind == 'player-eom') {
-                    await listener.playerEOM(evt.player);
-                } else if (evt.kind == 'player-video-frame') {
-                    await listener.playerVideoFrame(evt.player);
+                    const evt = await evtQueue.waitForEvent();
+                    if (evt.kind == 'keydown') {
+                        await listener.keyPressed(await new KeyEvent(...evt.args));
+                    } else if (evt.kind == 'keyup') {
+                        await listener.keyReleased(await new KeyEvent(...evt.args));
+                    } else if (evt.kind == 'pointerpressed') {
+                        await listener.pointerPressed(await new PointerEvent(evt.x, evt.y));
+                    } else if (evt.kind == 'pointerdragged') {
+                        await listener.pointerDragged(await new PointerEvent(evt.x, evt.y));
+                    } else if (evt.kind == 'pointerreleased') {
+                        await listener.pointerReleased(await new PointerEvent(evt.x, evt.y));
+                    } else if (evt.kind == 'player-eom') {
+                        await listener.playerEOM(evt.player);
+                    } else if (evt.kind == 'player-video-frame') {
+                        await listener.playerVideoFrame(evt.player);
+                    }
+                },
+                async Java_pl_zb3_freej2me_bridge_shell_Shell_restart(lib) {
+                    location.reload();
+                },
+                async Java_pl_zb3_freej2me_bridge_shell_Shell_exit(lib) {
+                    location.href = './';
+                },
+                async Java_pl_zb3_freej2me_bridge_shell_Shell_sthop(lib) {
+                    debugger;
+                },
+                async Java_pl_zb3_freej2me_bridge_shell_Shell_say(lib, sth) {
+                    console.log('[say]', sth);
+                },
+                async Java_pl_zb3_freej2me_bridge_shell_Shell_sayObject(lib, label, obj) {
+                    debugger;
+                    console.log('[sayobject]', label, obj);
                 }
-            },
-            async Java_pl_zb3_freej2me_bridge_shell_Shell_restart(lib) {
-                location.reload();
-            },
-            async Java_pl_zb3_freej2me_bridge_shell_Shell_exit(lib) {
-                location.href = './';
-            },
-            async Java_pl_zb3_freej2me_bridge_shell_Shell_sthop(lib) {
-                debugger;
-            },
-            async Java_pl_zb3_freej2me_bridge_shell_Shell_say(lib, sth) {
-                console.log('[say]', sth);
-            },
-            async Java_pl_zb3_freej2me_bridge_shell_Shell_sayObject(lib, label, obj) {
-                debugger;
-                console.log('[sayobject]', label, obj);
             }
-        }
-    });
+        });
+    } catch (err) {
+        console.error("CheerpJ init error:", err);
+        showLoadingError("CheerpJ JVM initialization failed.", err.message || String(err));
+        return;
+    }
 
-    document.getElementById("loading").textContent = "Loading...";
+    // 3. Load FreeJ2ME Core Library
+    updateLoadingStatus("Loading FreeJ2ME Engine...", "Fetching emulator core");
+    let lib;
+    try {
+        lib = await cheerpjRunLibrary(cheerpjWebRoot + "/freej2me-web.jar");
+    } catch (err) {
+        console.error("CheerpJ run library error:", err);
+        showLoadingError("Failed to load freej2me-web.jar.", err.message || String(err));
+        return;
+    }
 
-    const lib = await cheerpjRunLibrary(cheerpjWebRoot+"/freej2me-web.jar");
-
-    const FreeJ2ME = await lib.org.recompile.freej2me.FreeJ2ME;
+    // 4. Resolve FreeJ2ME class
+    updateLoadingStatus("Launching Game...", "Starting MIDlet bytecode");
+    let FreeJ2ME;
+    try {
+        FreeJ2ME = await lib.org.recompile.freej2me.FreeJ2ME;
+    } catch (err) {
+        console.error("Failed to resolve FreeJ2ME class:", err);
+        showLoadingError("Failed to resolve FreeJ2ME class.", err.message || String(err));
+        return;
+    }
 
     let args;
-
     if (sp.get('app')) {
         const app = sp.get('app');
-        await ensureAppInstalled(lib, app);
-
+        try {
+            await ensureAppInstalled(lib, app);
+        } catch (err) {
+            console.error("Failed to install app:", err);
+        }
         args = ['app', sp.get('app')];
     } else {
         const jarParam = sp.get('jar') || "game.jar";
         if (jarParam.startsWith('http://') || jarParam.startsWith('https://')) {
             args = ['jar', jarParam];
         } else {
-            args = ['jar', cheerpjWebRoot+"/jar/" + jarParam];
+            args = ['jar', cheerpjWebRoot + "/jar/" + jarParam];
         }
     }
 
+    // Visual feedback if game bytecode compilation takes a few seconds
+    const frameTimeout = setTimeout(() => {
+        if (!scaleSet) {
+            updateLoadingStatus("Starting Game...", "Compiling game bytecode...");
+        }
+    }, 6000);
+
     FreeJ2ME.main(args).catch(e => {
-        e.printStackTrace();
-        document.getElementById('loading').textContent = 'Crash :(';
+        clearTimeout(frameTimeout);
+        if (e && e.printStackTrace) e.printStackTrace();
+        console.error("FreeJ2ME runtime exception:", e);
+        showLoadingError("Game stopped unexpectedly.", e.message || String(e));
     });
-
-
 }
 
 init();
