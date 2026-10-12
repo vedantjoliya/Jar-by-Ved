@@ -277,7 +277,12 @@ async function ensureAppInstalled(lib, appId) {
     }
 }
 
-function updateLoadingStatus(msg, sub = '') {
+let startTime = Date.now();
+let timerInterval = null;
+
+function updateLoadingProgress(percent, msg, sub = '') {
+    const bar = document.getElementById('loading-bar');
+    if (bar) bar.style.width = `${percent}%`;
     const statusEl = document.getElementById('loading-status');
     if (statusEl) statusEl.textContent = msg;
     const subEl = document.getElementById('loading-sub');
@@ -285,27 +290,96 @@ function updateLoadingStatus(msg, sub = '') {
 }
 
 function showLoadingError(errorMsg, detail = '') {
+    if (timerInterval) clearInterval(timerInterval);
     const spinner = document.getElementById('loading-spinner');
     if (spinner) spinner.style.display = 'none';
+    const bar = document.getElementById('loading-bar');
+    if (bar) {
+        bar.style.width = '100%';
+        bar.style.background = '#ef4444';
+    }
     const statusEl = document.getElementById('loading-status');
     if (statusEl) statusEl.textContent = 'Emulator Error';
     const subEl = document.getElementById('loading-sub');
     if (subEl) subEl.textContent = errorMsg + (detail ? ` (${detail})` : '');
-    const retryBtn = document.getElementById('loading-retry');
-    if (retryBtn) retryBtn.style.display = 'inline-flex';
+    const actionsEl = document.getElementById('loading-actions');
+    if (actionsEl) actionsEl.style.display = 'flex';
 }
 
+function dismissLoadingOverlay() {
+    if (scaleSet) return;
+    scaleSet = true;
+    if (timerInterval) clearInterval(timerInterval);
+    const loadingEl = document.getElementById('loading');
+    if (loadingEl) {
+        loadingEl.style.display = 'none';
+        loadingEl.classList.add('hidden');
+    }
+    display.style.display = '';
+    display.focus();
+    autoscale();
+}
+
+function hookScreenCanvas(ctx) {
+    if (!ctx) return;
+    const methods = ['drawImage', 'fillRect', 'putImageData', 'strokeRect'];
+    methods.forEach(fn => {
+        if (typeof ctx[fn] === 'function') {
+            const orig = ctx[fn].bind(ctx);
+            ctx[fn] = function(...args) {
+                dismissLoadingOverlay();
+                return orig(...args);
+            };
+        }
+    });
+}
+
+// Global error traps for unhandled exceptions before first frame
+window.addEventListener('error', (e) => {
+    if (!scaleSet) {
+        console.warn("Captured window error:", e.message);
+    }
+});
+window.addEventListener('unhandledrejection', (e) => {
+    if (!scaleSet) {
+        console.warn("Captured unhandled rejection:", e.reason);
+    }
+});
+
 async function init() {
-    updateLoadingStatus("Loading CheerpJ...", "Preparing virtual Java environment");
+    startTime = Date.now();
+    updateLoadingProgress(20, "Loading CheerpJ...", "Preparing virtual Java environment");
+
+    // Start live elapsed timer
+    const timerEl = document.getElementById('loading-timer');
+    timerInterval = setInterval(() => {
+        if (scaleSet) {
+            clearInterval(timerInterval);
+            return;
+        }
+        const elapsedSec = Math.floor((Date.now() - startTime) / 1000);
+        if (timerEl) timerEl.textContent = `${elapsedSec}s`;
+
+        if (elapsedSec >= 10 && elapsedSec < 18) {
+            updateLoadingProgress(90, "Starting Game...", `Optimizing Java bytecode (${elapsedSec}s)...`);
+        } else if (elapsedSec >= 18 && elapsedSec < 30) {
+            updateLoadingProgress(95, "Compiling Classes...", `First launch may take ~20-25s (${elapsedSec}s)...`);
+            const actions = document.getElementById('loading-actions');
+            if (actions) actions.style.display = 'flex';
+        } else if (elapsedSec >= 30) {
+            showLoadingError("Startup took longer than expected.", "Tap Reload or choose another title.");
+        }
+    }, 1000);
 
     display = document.getElementById('display');
     screenCtx = display.getContext('2d');
+    hookScreenCanvas(screenCtx);
 
     setListeners();
 
     // Safe Non-blocking Audio Initialization
     try {
-        updateLoadingStatus("Starting Audio Subsystem...", "Initializing audio engine");
+        updateLoadingProgress(35, "Starting Audio Engine...", "Configuring audio subsystem");
         const audioCtx = createUnlockingAudioContext();
         window.libmidi = new LibMidi(audioCtx);
         await Promise.race([
@@ -328,7 +402,7 @@ async function init() {
         window.libmedia = null;
     }
 
-    updateLoadingStatus("Starting CheerpJ Runtime...", "Configuring JVM natives");
+    updateLoadingProgress(50, "Initializing JVM Runtime...", "Configuring JVM natives");
 
     try {
         await cheerpjInit({
@@ -352,16 +426,9 @@ async function init() {
                     return screenCtx;
                 },
                 async Java_pl_zb3_freej2me_bridge_shell_Shell_setCanvasSize(lib, width, height) {
-                    if (!scaleSet) {
-                        const loadingEl = document.getElementById('loading');
-                        if (loadingEl) loadingEl.style.display = 'none';
-                        display.style.display = '';
-                        scaleSet = true;
-                        display.focus();
-                    }
                     screenCtx.canvas.width = width;
                     screenCtx.canvas.height = height;
-                    autoscale();
+                    dismissLoadingOverlay();
                 },
                 async Java_pl_zb3_freej2me_bridge_shell_Shell_waitForAndDispatchEvents(lib, listener) {
                     const KeyEvent = await lib.pl.zb3.freej2me.bridge.shell.KeyEvent;
@@ -408,7 +475,7 @@ async function init() {
         return;
     }
 
-    updateLoadingStatus("Loading FreeJ2ME Engine...", "Fetching emulator core");
+    updateLoadingProgress(70, "Loading FreeJ2ME Engine...", "Fetching emulator core");
 
     let lib;
     try {
@@ -419,7 +486,7 @@ async function init() {
         return;
     }
 
-    updateLoadingStatus("Launching Game...", "Starting MIDlet bytecode");
+    updateLoadingProgress(85, "Launching Game...", "Starting MIDlet bytecode");
 
     let FreeJ2ME;
     try {
@@ -448,19 +515,13 @@ async function init() {
         }
     }
 
-    // Safety fallback: if the game bytecode execution takes long to trigger first frame, show helpful status
-    const frameTimeout = setTimeout(() => {
-        if (!scaleSet) {
-            updateLoadingStatus("Starting Game...", "Compiling game bytecode...");
-        }
-    }, 6000);
-
     FreeJ2ME.main(args).catch(e => {
-        clearTimeout(frameTimeout);
+        if (timerInterval) clearInterval(timerInterval);
         if (e && e.printStackTrace) e.printStackTrace();
         console.error("FreeJ2ME runtime exception:", e);
         showLoadingError("Game stopped unexpectedly.", e.message || String(e));
     });
 }
 
-init();
+init();
+
