@@ -3,14 +3,11 @@
 
 <head>
   <meta charset="UTF-8">
-  <title>JarByVed Player</title>
-  <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="stylesheet" type="text/css" href="style/main.css">
   <link rel="stylesheet" type="text/css" href="style/confirm.css">
   <link rel="stylesheet" type="text/css" href="style/progress_activity.css">
   <link rel="stylesheet" type="text/css" href="style/headers.css">
   <link rel="stylesheet" type="text/css" href="style/drawer.css">
-  <link rel="stylesheet" type="text/css" href="player.css">
 
   <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1">
  
@@ -124,7 +121,38 @@
         </div>
       </section>
 
-      <!-- Old keypad replaced by responsive mobile touch keypad -->
+      <div id="gamepad" onselectstart ='return false' οnselect='document.selection.empty()'>
+        <div id="padcontent">
+          <button>1</button>
+          <button>2</button>
+          <button>3</button>
+          <button>L</button>
+          <div></div>
+          <button >R</button> 
+        </div>
+        <div id="padcontent">
+          <button>4</button>
+          <button>5</button>
+          <button>6</button>
+          <div></div>
+          <button >up</button>
+        </div>
+        <div id="padcontent">
+          <button>7</button>
+          <button>8</button>
+          <button>9</button>
+          <button>left</button>
+          <button >OK</button>
+          <button >right</button>
+        </div>
+        <div id="padcontent" >
+          <button>*</button>
+          <button>0</button>
+          <button>#</button>
+          <div></div>
+          <button>down</button>
+        </div>
+      </div>
 
       <div id="download-screen" class="screen">
         <h1 class="title">Downloading midlet…</h1>
@@ -248,48 +276,9 @@
         <button id="start">Start</button>
 
       </section>
-  </div>
-
-  <div id="left-keys" class="keypad-part">
-    <div class="key-grid left-grid">
-      <button data-key="Digit1" class="key">1</button>
-      <button data-key="Digit2" class="key">2 <span>ABC</span></button>
-      <button data-key="Digit3" class="key">3 <span>DEF</span></button>
-      <button data-key="Digit4" class="key">4 <span>GHI</span></button>
-      <button data-key="Digit5" class="key">5 <span>JKL</span></button>
-      <button data-key="Digit6" class="key">6 <span>MNO</span></button>
-      <button data-key="Digit7" class="key">7 <span>PQRS</span></button>
-      <button data-key="Digit8" class="key">8 <span>TUV</span></button>
-      <button data-key="Digit9" class="key">9 <span>WXYZ</span></button>
-      <button data-key="NumpadAsterisk" class="key">*</button>
-      <button data-key="Digit0" class="key">0 <span>+</span></button>
-      <button data-key="NumpadDivide" class="key">#</button>
     </div>
-  </div>
+ </div>
 
-  <div id="right-keys" class="keypad-part">
-    <div class="key-grid right-grid">
-      <button data-key="F1" class="key">L</button>
-      <button data-key="ArrowUp" class="key arrow-key" aria-label="Up">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"></polyline></svg>
-      </button>
-      <button data-key="F2" class="key">R</button>
-      <button data-key="ArrowLeft" class="key arrow-key" aria-label="Left">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
-      </button>
-      <button data-key="Enter" class="key ok-key">OK</button>
-      <button data-key="ArrowRight" class="key arrow-key" aria-label="Right">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
-      </button>
-      <button data-key="Escape" class="key small-key small-key-left">Esc</button>
-      <button data-key="ArrowDown" class="key arrow-key" aria-label="Down">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
-      </button>
-      <button data-key="Maximize" class="key small-key small-key-right" aria-label="Maximize">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
-      </button>
-    </div>
-  </div>
 </body>
 
 </html>

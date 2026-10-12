@@ -1,4 +1,4 @@
-import { setupAuth, syncToCloud, uploadCustomGame, getCustomGames, currentUser, getPreferences, savePreferences } from './firebase-auth.js';
+import { setupAuth, syncToCloud, loadFromCloud, uploadCustomGame, getCustomGames, currentUser, getPreferences, savePreferences } from './firebase-auth.js';
 
 let allGames = [];
 let allCustomGames = [];
@@ -506,13 +506,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ==========================================
   // 6. Game Player Modal
   // ==========================================
-  function openGame(game, isCustom = false) {
+  async function openGame(game, isCustom = false) {
     const jarTarget = isCustom ? game.url : game.file;
     const gameName = game.name || game.file;
 
     modalGameTitle.textContent = gameName;
 
-    const url = new URL(window.location.origin + '/j2me/index.html');
+    // Pull latest game progress and RMS saves from cloud before launching
+    if (currentUser) {
+      try {
+        await loadFromCloud();
+      } catch (err) {
+        console.warn('Pre-game cloud load notice:', err);
+      }
+    }
+
+    const url = new URL(window.location.origin + '/run.html');
     url.searchParams.set('jar', jarTarget);
 
     // Auto-enable touch keypad if mobile or tablet device
@@ -539,6 +548,26 @@ document.addEventListener('DOMContentLoaded', async () => {
       renderAll();
     }, 300);
   }
+
+  // Periodic auto-sync while in-game (every 40 seconds)
+  setInterval(() => {
+    if (playerModal.classList.contains('show')) {
+      syncToCloud();
+    }
+  }, 40000);
+
+  // Auto-sync on app minimization, tab switch, or browser close
+  window.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden' && playerModal.classList.contains('show')) {
+      syncToCloud();
+    }
+  });
+
+  window.addEventListener('beforeunload', () => {
+    if (playerModal.classList.contains('show')) {
+      syncToCloud();
+    }
+  });
 
   modalCloseBtn.addEventListener('click', closeModal);
 

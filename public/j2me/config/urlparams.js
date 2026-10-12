@@ -39,18 +39,7 @@
     params[param[0]] = param[1];
   });
 
-  if (params.jar && !params.jars) {
-    var j = params.jar;
-    if (!j.startsWith('/') && !j.startsWith('http')) {
-      j = '/jar/' + j;
-    }
-    params.jars = j;
-  }
-  if (params.jars) {
-    if (!params.jars.startsWith('/') && !params.jars.startsWith('http') && !params.jars.startsWith('jar/')) {
-      params.jars = '/jar/' + params.jars;
-    }
-  }
+  params.args = (params.args || "").split(",");
 
   if ("midletClassName" in params) {
     params.midletClassName = params.midletClassName.replace(/\//g, '.');

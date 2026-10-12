@@ -1,4 +1,7 @@
-// runtests config (empty by default, configured via urlparams)
+config.jars = "jar/Anyview4.0.jar";
+config.jad = "jar/Anyview4.0.jad";
+config.midletClassName = "com.ismyway.anyview.Anyview";
+
 MIDlet.shouldStartBackgroundService = function() {
-  return typeof fs !== 'undefined' && fs.exists && fs.exists("/startBackgroundService");
+  return fs.exists("/startBackgroundService");
 };

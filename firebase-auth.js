@@ -27,7 +27,7 @@ let syncUnsubscribe = null;
 // IndexedDB Helper for CheerpJ File System Sync
 async function exportCheerpJDB() {
   return new Promise((resolve) => {
-    const timer = setTimeout(() => resolve(null), 2500);
+    const timer = setTimeout(() => resolve(null), 3000);
     try {
       const request = indexedDB.open('/str/');
       request.onerror = () => { clearTimeout(timer); resolve(null); };
@@ -50,7 +50,11 @@ async function exportCheerpJDB() {
             clearTimeout(timer);
             const data = {};
             keysReq.result.forEach((k, i) => {
-              data[k] = allReq.result[i];
+              const val = allReq.result[i];
+              // Exclude large binary packages to stay well under Firestore 1MB document limit
+              if (val && !k.endsWith('.jar') && !k.endsWith('.zip')) {
+                data[k] = val;
+              }
             });
             db.close();
             resolve(data);
@@ -73,9 +77,15 @@ async function exportCheerpJDB() {
 async function importCheerpJDB(data) {
   if (!data || Object.keys(data).length === 0) return;
   return new Promise((resolve) => {
-    const timer = setTimeout(() => resolve(), 2500);
+    const timer = setTimeout(() => resolve(), 3000);
     try {
       const request = indexedDB.open('/str/');
+      request.onupgradeneeded = (e) => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains('files')) {
+          db.createObjectStore('files');
+        }
+      };
       request.onerror = () => { clearTimeout(timer); resolve(); };
       request.onblocked = () => { clearTimeout(timer); resolve(); };
       request.onsuccess = (e) => {
@@ -118,8 +128,7 @@ export async function syncToCloud() {
   if (!currentUser) return;
   try {
     const data = await exportCheerpJDB();
-    if (data) {
-      // Convert Uint8Arrays/Blobs to Arrays for Firestore JSON
+    if (data && Object.keys(data).length > 0) {
       const serialized = {};
       for (const [k, v] of Object.entries(data)) {
         if (v && v.contents) {
@@ -130,12 +139,16 @@ export async function syncToCloud() {
         }
       }
       
-      const docRef = doc(db, "saves", currentUser.uid);
-      await setDoc(docRef, {
-        cheerpjStr: JSON.stringify(serialized),
-        timestamp: new Date().toISOString()
-      }, { merge: true }); // Crucial: merge preserves preferences and customGames!
-      console.log('Saved game state to cloud!');
+      const payloadStr = JSON.stringify(serialized);
+      // Stay safely under Firestore's 1,048,576 bytes limit
+      if (payloadStr.length < 900000) {
+        const docRef = doc(db, "saves", currentUser.uid);
+        await setDoc(docRef, {
+          cheerpjStr: payloadStr,
+          timestamp: new Date().toISOString()
+        }, { merge: true });
+        console.log('Saved game state & history to cloud!');
+      }
     }
   } catch (e) {
     console.warn("Cloud save error:", e.message);
@@ -148,7 +161,11 @@ export async function loadFromCloud() {
     const docRef = doc(db, "saves", currentUser.uid);
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
-      const saved = docSnap.data().cheerpjStr;
+      const docData = docSnap.data();
+      if (docData.preferences) {
+        localStorage.setItem('jarbyved_prefs', JSON.stringify(docData.preferences));
+      }
+      const saved = docData.cheerpjStr;
       if (saved) {
         const parsed = JSON.parse(saved);
         const data = {};
@@ -160,7 +177,7 @@ export async function loadFromCloud() {
           }
         }
         await importCheerpJDB(data);
-        console.log('Loaded game state from cloud!');
+        console.log('Loaded game state & history from cloud!');
       }
     }
   } catch (e) {
@@ -360,24 +377,36 @@ export async function getCustomGames() {
 }
 
 export async function getPreferences() {
-  let prefs = { favorites: [], recents: [] };
+  let localPrefs = { favorites: [], recents: [] };
   try {
     const local = localStorage.getItem('jarbyved_prefs');
-    if (local) prefs = JSON.parse(local);
+    if (local) localPrefs = JSON.parse(local);
   } catch(e) {}
   
-  if (!currentUser) return prefs;
+  if (!currentUser) return localPrefs;
   try {
     const docRef = doc(db, "saves", currentUser.uid);
     const docSnap = await getDoc(docRef);
     if (docSnap.exists() && docSnap.data().preferences) {
-      prefs = docSnap.data().preferences;
-      localStorage.setItem('jarbyved_prefs', JSON.stringify(prefs));
+      const cloudPrefs = docSnap.data().preferences;
+      // Merge preferences so history across all devices is preserved
+      const mergedFavorites = Array.from(new Set([...(cloudPrefs.favorites || []), ...(localPrefs.favorites || [])]));
+      const cloudRecents = cloudPrefs.recents || [];
+      const localRecents = (localPrefs.recents || []).filter(id => !cloudRecents.includes(id));
+      const mergedRecents = [...cloudRecents, ...localRecents].slice(0, 30);
+      
+      const merged = { favorites: mergedFavorites, recents: mergedRecents };
+      localStorage.setItem('jarbyved_prefs', JSON.stringify(merged));
+      // Save merged back to cloud with merge: true
+      setDoc(docRef, { preferences: merged, lastActive: new Date().toISOString() }, { merge: true }).catch(() => {});
+      return merged;
+    } else if (localPrefs.favorites.length > 0 || localPrefs.recents.length > 0) {
+      setDoc(docRef, { preferences: localPrefs, lastActive: new Date().toISOString() }, { merge: true }).catch(() => {});
     }
   } catch (e) {
     console.error("Error fetching preferences:", e);
   }
-  return prefs;
+  return localPrefs;
 }
 
 export function savePreferences(prefs) {
@@ -388,7 +417,7 @@ export function savePreferences(prefs) {
   if (!currentUser) return;
   try {
     const docRef = doc(db, "saves", currentUser.uid);
-    setDoc(docRef, { preferences: prefs }, { merge: true }).catch(err => {
+    setDoc(docRef, { preferences: prefs, lastActive: new Date().toISOString() }, { merge: true }).catch(err => {
       console.warn("Background preferences sync:", err.message);
     });
   } catch(e) {

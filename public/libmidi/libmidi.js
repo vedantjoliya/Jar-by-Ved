@@ -33,54 +33,35 @@ export class LibMidi {
     }
 
     async init() {
-        if (!this.context || !this.context.audioWorklet || typeof AudioWorkletNode === 'undefined') {
-            this.initialized = false;
+        if (!this.context.audioWorklet) {
+            this.initialized = true;
             return;
         }
 
-        try {
-            const addModuleTask = this.context.audioWorklet.addModule(new URL('worklet.js', import.meta.url).toString());
-            let module;
-            const wasmUrl = new URL('libmidi.wasm', import.meta.url);
-            if (WebAssembly.compileStreaming) {
-                try {
-                    module = await WebAssembly.compileStreaming(fetch(wasmUrl));
-                } catch (e) {
-                    const resp = await fetch(wasmUrl);
-                    const buf = await resp.arrayBuffer();
-                    module = await WebAssembly.compile(buf);
-                }
-            } else {
-                const resp = await fetch(wasmUrl);
-                const buf = await resp.arrayBuffer();
-                module = await WebAssembly.compile(buf);
+        const addModuleTask = this.context.audioWorklet.addModule(new URL('worklet.js', import.meta.url).toString());
+
+        const module = await WebAssembly.compileStreaming(fetch(new URL('libmidi.wasm', import.meta.url)));
+
+        await addModuleTask;
+
+        // since we can't directly message the module.. yet
+        const bootstrapNode = new AudioWorkletNode(this.context, "bootstrap", {
+            processorOptions: {
+                module
             }
+        });
 
-            await addModuleTask;
-
-            // since we can't directly message the module.. yet
-            const bootstrapNode = new AudioWorkletNode(this.context, "bootstrap", {
-                processorOptions: {
-                    module
-                }
-            });
-
-            await new Promise((resolve) => {
-                const timer = setTimeout(() => {
-                    resolve(); // Timeout safeguard to prevent indefinite hang
-                }, 2500);
-
-                bootstrapNode.port.onmessage = e => {
-                    clearTimeout(timer);
+        await new Promise((resolve, reject) => {
+            bootstrapNode.port.onmessage = e => {
+                if (e.data.ok) {
                     resolve();
-                };
-            });
+                } else {
+                    reject(e.data.error);
+                }
+            };
+        });
 
-            this.initialized = true;
-        } catch (err) {
-            console.warn("LibMidi audio init warning (continuing gracefully):", err);
-            this.initialized = false;
-        }
+        this.initialized = true;
     }
 
 
@@ -97,44 +78,12 @@ export class LibMidi {
     }
 
     get midiPlayer() {
-        if (!this.initialized) {
-            if (!this._dummyPlayer) {
-                this._dummyPlayer = new DummyMIDIPlayer();
-            }
-            return this._dummyPlayer;
-        }
-
-        if (!this._midiPlayer) {
-            try {
-                this._midiPlayer = new MIDIPlayer(this.context, this.destination);
-            } catch (err) {
-                console.warn("MIDIPlayer construct error:", err);
-                if (!this._dummyPlayer) {
-                    this._dummyPlayer = new DummyMIDIPlayer();
-                }
-                return this._dummyPlayer;
-            }
+        if (this.initialized && !this._midiPlayer) {
+            this._midiPlayer = new MIDIPlayer(this.context, this.destination);
         }
 
         return this._midiPlayer;
     }
-}
-
-class DummyMIDIPlayer extends EventTarget {
-    constructor() {
-        super();
-        this.duration = 0;
-        this.volume = 1;
-    }
-    send() { return Promise.resolve(); }
-    async setSequence(buffer) { return Promise.resolve(); }
-    play() {}
-    loop(times) {}
-    stop() {}
-    shortEvent(status, data1, data2) {}
-    async getPosition() { return 0; }
-    seek(pos) {}
-    close() {}
 }
 
 
