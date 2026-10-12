@@ -26,62 +26,91 @@ let syncUnsubscribe = null;
 
 // IndexedDB Helper for CheerpJ File System Sync
 async function exportCheerpJDB() {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open('/str/');
-    request.onerror = (e) => resolve(null); // Return null if not found
-    request.onsuccess = (e) => {
-      const db = e.target.result;
-      if (!db.objectStoreNames.contains('files')) {
-        db.close();
-        resolve(null);
-        return;
-      }
-      const tx = db.transaction('files', 'readonly');
-      const store = tx.objectStore('files');
-      const allReq = store.getAll();
-      const keysReq = store.getAllKeys();
-      
-      tx.oncomplete = () => {
-        const data = {};
-        keysReq.result.forEach((k, i) => {
-          data[k] = allReq.result[i];
-        });
-        db.close();
-        resolve(data);
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(null), 2500);
+    try {
+      const request = indexedDB.open('/str/');
+      request.onerror = () => { clearTimeout(timer); resolve(null); };
+      request.onblocked = () => { clearTimeout(timer); resolve(null); };
+      request.onsuccess = (e) => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains('files')) {
+          db.close();
+          clearTimeout(timer);
+          resolve(null);
+          return;
+        }
+        try {
+          const tx = db.transaction('files', 'readonly');
+          const store = tx.objectStore('files');
+          const allReq = store.getAll();
+          const keysReq = store.getAllKeys();
+          
+          tx.oncomplete = () => {
+            clearTimeout(timer);
+            const data = {};
+            keysReq.result.forEach((k, i) => {
+              data[k] = allReq.result[i];
+            });
+            db.close();
+            resolve(data);
+          };
+          tx.onerror = () => { db.close(); clearTimeout(timer); resolve(null); };
+          tx.onabort = () => { db.close(); clearTimeout(timer); resolve(null); };
+        } catch (err) {
+          db.close();
+          clearTimeout(timer);
+          resolve(null);
+        }
       };
-    };
+    } catch (err) {
+      clearTimeout(timer);
+      resolve(null);
+    }
   });
 }
 
 async function importCheerpJDB(data) {
   if (!data || Object.keys(data).length === 0) return;
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open('/str/');
-    request.onupgradeneeded = (e) => {
-      const db = e.target.result;
-      if (!db.objectStoreNames.contains('files')) {
-        db.createObjectStore('files');
-      }
-    };
-    request.onsuccess = (e) => {
-      const db = e.target.result;
-      if (!db.objectStoreNames.contains('files')) {
-        db.close();
-        resolve();
-        return;
-      }
-      const tx = db.transaction('files', 'readwrite');
-      const store = tx.objectStore('files');
-      
-      for (const [key, value] of Object.entries(data)) {
-        store.put(value, key);
-      }
-      
-      tx.oncomplete = () => {
-        db.close();
-        resolve();
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(), 2500);
+    try {
+      const request = indexedDB.open('/str/');
+      request.onerror = () => { clearTimeout(timer); resolve(); };
+      request.onblocked = () => { clearTimeout(timer); resolve(); };
+      request.onsuccess = (e) => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains('files')) {
+          db.close();
+          clearTimeout(timer);
+          resolve();
+          return;
+        }
+        try {
+          const tx = db.transaction('files', 'readwrite');
+          const store = tx.objectStore('files');
+          
+          for (const [key, value] of Object.entries(data)) {
+            store.put(value, key);
+          }
+          
+          tx.oncomplete = () => {
+            db.close();
+            clearTimeout(timer);
+            resolve();
+          };
+          tx.onerror = () => { db.close(); clearTimeout(timer); resolve(); };
+          tx.onabort = () => { db.close(); clearTimeout(timer); resolve(); };
+        } catch (err) {
+          db.close();
+          clearTimeout(timer);
+          resolve();
+        }
       };
-    };
+    } catch (err) {
+      clearTimeout(timer);
+      resolve();
+    }
   });
 }
 

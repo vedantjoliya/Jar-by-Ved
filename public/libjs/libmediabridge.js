@@ -1,12 +1,33 @@
-// this needs to be run on the main thread
-// assuming window.libmedia has the instance and contexte
 export default {
     async Java_pl_zb3_freej2me_bridge_media_MediaBridge_createMediaPlayer(lib) {
-        const player = window.libmedia.createMediaPlayer();
-        player.addEventListener('end-of-media', e => {
-            window.evtQueue.queueEvent({kind: 'player-eom', player: e.target});
-        })
-        return player;
+        if (!window.libmedia || !window.libmedia.createMediaPlayer) {
+            return {
+                addEventListener: () => {},
+                load: async () => false,
+                play: () => {},
+                setLooping: () => {},
+                stop: () => {},
+                position: 0,
+                duration: -1,
+                seek: () => {},
+                close: () => {},
+                volume: 1,
+                configureVideo: () => {},
+                videoWidth: 0,
+                videoHeight: 0,
+                getSnapshot: async () => null
+            };
+        }
+        try {
+            const player = window.libmedia.createMediaPlayer();
+            player.addEventListener('end-of-media', e => {
+                window.evtQueue.queueEvent({kind: 'player-eom', player: e.target});
+            });
+            return player;
+        } catch (e) {
+            console.warn("createMediaPlayer error:", e);
+            return null;
+        }
     },
     async Java_pl_zb3_freej2me_bridge_media_MediaBridge_playerLoad(lib, player, data, contentType) {
         const res = await player.load(data.buffer, contentType);
