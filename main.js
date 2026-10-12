@@ -512,7 +512,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     modalGameTitle.textContent = gameName;
 
-    const url = new URL(window.location.origin + '/run.html');
+    const url = new URL(window.location.origin + '/j2me/index.html');
     url.searchParams.set('jar', jarTarget);
 
     // Auto-enable touch keypad if mobile or tablet device

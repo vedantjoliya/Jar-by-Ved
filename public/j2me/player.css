@@ -1,0 +1,262 @@
+/* J2meJS Retro Game Player Dark Theme */
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #0b0f19;
+  color: #f1f5f9;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+#pageContainer,
+#settings,
+#profilerContainer,
+#consoleContainer,
+#raw-console,
+#gamepad {
+  display: none !important;
+}
+
+#display-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100% !important;
+  height: 100% !important;
+  float: none !important;
+  background-color: #0b0f19;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+#display {
+  position: relative;
+  background-color: #000;
+  border: none;
+  margin: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+#drawer {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#main {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#canvas {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+  touch-action: none;
+  border-radius: 4px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
+  max-width: 100%;
+  max-height: 100%;
+}
+
+/* Loading and Splash Screens */
+.screen {
+  background: #0b0f19 !important;
+  color: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.screen .title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #f8fafc;
+  margin-bottom: 12px;
+}
+
+.download-progress-container,
+.splash-progress-container {
+  width: 200px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+progress.pack-activity {
+  width: 100%;
+  height: 100%;
+  accent-color: #38bdf8;
+}
+
+/* Mobile Virtual Keypad Layout */
+.keypad-part {
+  background-color: #121622;
+  padding: 8px;
+  display: none;
+  justify-content: center;
+  align-items: center;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  z-index: 20;
+}
+
+.key-grid {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  height: 100%;
+}
+
+.left-grid {
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(4, 1fr);
+}
+
+.right-grid {
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+}
+
+.key {
+  background: linear-gradient(180deg, #242b3b, #181d29);
+  color: #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  font-size: 1.45rem;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  transition: background-color 0.1s ease, transform 0.05s ease, border-color 0.1s ease;
+  line-height: 1.1;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+}
+
+.key span {
+  font-size: 0.45em;
+  font-weight: 500;
+  margin-top: 2px;
+  color: #94a3b8;
+  letter-spacing: 0.05em;
+}
+
+.key.active,
+.key:active {
+  background: linear-gradient(180deg, #38bdf8, #0284c7) !important;
+  color: #ffffff !important;
+  border-color: #38bdf8 !important;
+  transform: scale(0.94);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.key.active span,
+.key:active span {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.arrow-key {
+  font-size: 1.8rem;
+}
+
+.ok-key {
+  font-size: 1.25rem;
+  background: linear-gradient(180deg, #1e293b, #0f172a);
+  border-color: rgba(56, 189, 248, 0.3);
+  color: #38bdf8;
+}
+
+.small-key {
+  width: 75%;
+  height: 75%;
+  font-size: 0.85rem;
+  align-self: end;
+  padding: 2px;
+  line-height: 1;
+}
+
+.small-key-left {
+  justify-self: left;
+}
+
+.small-key-right {
+  justify-self: right;
+}
+
+#left-keys,
+#right-keys {
+  display: none;
+  position: absolute;
+  bottom: 0;
+}
+
+#left-keys {
+  left: 0;
+}
+
+#right-keys {
+  right: 0;
+}
+
+/* Portrait Mobile Keypad */
+body.kbd-portrait #left-keys,
+body.kbd-portrait #right-keys {
+  display: flex;
+  width: 50%;
+  height: 220px;
+}
+
+body.kbd-portrait #display-container {
+  bottom: 220px !important;
+  height: calc(100% - 220px) !important;
+}
+
+/* Landscape Mobile Keypad */
+body.kbd-landscape #left-keys,
+body.kbd-landscape #right-keys {
+  display: flex;
+  width: 200px;
+  height: 100%;
+}
+
+body.kbd-landscape #left-keys .key-grid,
+body.kbd-landscape #right-keys .key-grid {
+  max-height: 380px;
+}
+
+body.kbd-landscape #display-container {
+  left: 200px !important;
+  right: 200px !important;
+  width: calc(100% - 400px) !important;
+}
